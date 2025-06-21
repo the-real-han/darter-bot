@@ -127,3 +127,216 @@ To further improve the trading bot, consider:
 5. Broker Integration: Add API connections to brokers for automated trading
 6. Performance Optimization: Optimize code for faster backtesting of large datasets
 7. Additional Indicators: Implement more technical indicators like Fibonacci retracements, Elliott Wave, etc.
+## Usage Guide
+
+This section provides a comprehensive overview of all the ways you can use the options trading bot.
+
+### Basic Usage Options
+
+#### 1. Backtesting with Historical Data
+
+```bash
+# Basic backtesting with default symbols
+python main.py
+
+# Backtesting specific symbols
+python main.py --symbols AAPL MSFT GOOGL
+
+# Backtesting with custom timeframe and period
+python main.py --symbols TSLA --timeframe 1d --period 6mo
+```
+
+#### 2. Live Trading with Real-Time Data
+
+```bash
+# Live trading with Yahoo Finance (no API key needed)
+python live_trading.py --symbols AAPL MSFT
+
+# Live trading with Finnhub for stock data and Polygon.io for options data
+python live_trading.py --stock-provider finnhub --stock-api-key YOUR_FINNHUB_KEY --options-provider polygon --options-api-key YOUR_POLYGON_KEY
+```
+
+#### 3. Paper Trading Simulation
+
+```bash
+# Paper trading with default settings
+python live_trading.py --platform paper
+
+# Paper trading with custom initial balance
+python live_trading.py --platform paper --config custom_strategy.json
+```
+
+#### 4. Trading on Investopedia Simulator
+
+```bash
+# Using bearer token authentication (recommended)
+python live_trading.py --platform investopedia --auth-token YOUR_BEARER_TOKEN
+
+# Using legacy username/password authentication
+python live_trading.py --platform investopedia --username YOUR_USERNAME --password YOUR_PASSWORD
+```
+
+### Advanced Usage Options
+
+#### 5. Strategy Customization
+
+```bash
+# Using a custom strategy configuration
+python live_trading.py --config custom_strategy.json
+
+# Saving current strategy as default
+python live_trading.py --save-default
+```
+
+#### 6. Greek-Based Optimization
+
+```bash
+# Enable Greek optimization with default settings
+python live_trading.py --options-provider polygon --options-api-key YOUR_POLYGON_KEY
+
+# Use custom Greek optimization settings
+python live_trading.py --options-provider polygon --options-api-key YOUR_POLYGON_KEY --config greek_strategy.json
+```
+
+#### 7. Data Provider Combinations
+
+```bash
+# Use Yahoo Finance for both stock and options data (free, no API key)
+python live_trading.py --stock-provider yahoo --options-provider yahoo
+
+# Use Finnhub for real-time stock prices (1-minute updates)
+python live_trading.py --stock-provider finnhub --stock-api-key YOUR_FINNHUB_KEY
+
+# Use Polygon.io for options data with Greeks
+python live_trading.py --options-provider polygon --options-api-key YOUR_POLYGON_KEY
+```
+
+#### 8. Output and Visualization
+
+```bash
+# Specify custom output directory
+python live_trading.py --output-dir /path/to/custom/output
+
+# All generated files (charts, logs, reports) will be saved to the output directory
+```
+
+## Configuration File Reference
+
+The trading bot can be extensively customized through JSON configuration files. Below is an explanation of the key parameters:
+
+### General Settings
+
+```json
+{
+  "general": {
+    "risk_per_trade": 0.02,     // Percentage of account to risk per trade (0.02 = 2%)
+    "max_positions": 5,         // Maximum number of concurrent positions
+    "position_sizing": "risk_based"  // Position sizing method: "risk_based", "fixed", "kelly"
+  }
+}
+```
+
+### Technical Indicators
+
+```json
+{
+  "technical_indicators": {
+    "use_sma": true,            // Use Simple Moving Average
+    "use_ema": true,            // Use Exponential Moving Average
+    "use_macd": true,           // Use MACD (Moving Average Convergence Divergence)
+    "use_rsi": true,            // Use RSI (Relative Strength Index)
+    "use_bollinger": true,      // Use Bollinger Bands
+    "sma_periods": [20, 50, 200],  // Periods for SMA calculation
+    "ema_periods": [12, 26],    // Periods for EMA calculation
+    "macd_params": {
+      "fast_period": 12,        // Fast period for MACD
+      "slow_period": 26,        // Slow period for MACD
+      "signal_period": 9        // Signal line period for MACD
+    },
+    "rsi_period": 14,           // Period for RSI calculation
+    "bollinger_period": 20,     // Period for Bollinger Bands
+    "bollinger_std": 2.0        // Standard deviation for Bollinger Bands
+  }
+}
+```
+
+### Options Strategies
+
+```json
+{
+  "options_strategies": {
+    "default_strategy": "auto",  // "auto" or specific strategy name
+    "stop_loss_pct": 0.5,        // Exit if option loses 50% of its value
+    "take_profit_pct": 1.0,      // Exit if option gains 100% of its value
+    "max_days_to_hold": 14,      // Maximum days to hold a position
+    "strategy_selection": {
+      "bullish": {
+        "low_iv": "long_call",           // Strategy for bullish outlook in low IV
+        "high_iv": "bull_put_spread",    // Strategy for bullish outlook in high IV
+        "iv_threshold": 0.5              // IV threshold to switch strategies (0.5 = 50%)
+      },
+      "bearish": {
+        "low_iv": "long_put",            // Strategy for bearish outlook in low IV
+        "high_iv": "bear_call_spread",   // Strategy for bearish outlook in high IV
+        "iv_threshold": 0.5              // IV threshold to switch strategies
+      },
+      "neutral": {
+        "default": "iron_condor"         // Strategy for neutral outlook
+      }
+    },
+    "expiration_selection": "nearest",  // Options expiration selection: "nearest", "monthly", "weekly"
+    "strike_selection": {
+      "call_itm_pct": 0.03,     // Percentage in-the-money for calls (0.03 = 3%)
+      "call_otm_pct": 0.05,     // Percentage out-of-the-money for calls
+      "put_itm_pct": 0.03,      // Percentage in-the-money for puts
+      "put_otm_pct": 0.05       // Percentage out-of-the-money for puts
+    }
+  }
+}
+```
+
+### Signal Generation
+
+```json
+{
+  "signals": {
+    "trend_weight": 0.4,         // Weight of trend indicators in signal generation
+    "momentum_weight": 0.3,      // Weight of momentum indicators
+    "volatility_weight": 0.3,    // Weight of volatility indicators
+    "signal_threshold": 0.2,     // Threshold to generate a signal
+    "confirmation_required": true  // Require multiple indicator confirmation
+  }
+}
+```
+
+### Greek Optimization
+
+```json
+{
+  "use_greek_optimization": true,  // Enable Greek-based optimization
+  "volatility_bias": "neutral",    // Volatility outlook: "increasing", "decreasing", "neutral"
+  "greek_optimization": {
+    "delta_threshold": 0.5,      // Target delta for directional trades (0.0-1.0)
+    "gamma_threshold": 0.1,      // Minimum gamma for acceleration trades
+    "theta_threshold": -0.1,     // Maximum theta decay acceptable
+    "vega_threshold": 0.2,       // Minimum vega for volatility trades
+    "min_open_interest": 50,     // Minimum open interest for liquidity
+    "min_volume": 5,             // Minimum trading volume for liquidity
+    "max_bid_ask_spread": 0.1    // Maximum acceptable bid-ask spread as percentage
+  }
+}
+```
+
+### Backtesting Parameters
+
+```json
+{
+  "backtest": {
+    "initial_capital": 100000,     // Starting capital for backtesting
+    "commission_per_contract": 0.65,  // Commission fee per options contract
+    "slippage_pct": 0.01           // Slippage as percentage of price (0.01 = 1%)
+  }
+}
+```
+
+You can customize these parameters by creating your own JSON configuration file and passing it to the bot using the `--config` parameter.
