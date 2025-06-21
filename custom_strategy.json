@@ -1,0 +1,66 @@
+{
+    "version": "1.0.0",
+    "last_updated": "2025-06-21 06:00:00",
+    "general": {
+        "risk_per_trade": 0.01,
+        "max_positions": 3,
+        "position_sizing": "risk_based"
+    },
+    "technical_indicators": {
+        "use_sma": true,
+        "use_ema": true,
+        "use_macd": true,
+        "use_rsi": true,
+        "use_bollinger": true,
+        "sma_periods": [10, 30, 100],
+        "ema_periods": [8, 21],
+        "macd_params": {
+            "fast_period": 8,
+            "slow_period": 21,
+            "signal_period": 9
+        },
+        "rsi_period": 14,
+        "bollinger_period": 20,
+        "bollinger_std": 2.0
+    },
+    "options_strategies": {
+        "default_strategy": "auto",
+        "stop_loss_pct": 0.3,
+        "take_profit_pct": 0.75,
+        "max_days_to_hold": 10,
+        "strategy_selection": {
+            "bullish": {
+                "low_iv": "long_call",
+                "high_iv": "bull_put_spread",
+                "iv_threshold": 0.4
+            },
+            "bearish": {
+                "low_iv": "long_put",
+                "high_iv": "bear_call_spread",
+                "iv_threshold": 0.4
+            },
+            "neutral": {
+                "default": "iron_condor"
+            }
+        },
+        "expiration_selection": "monthly",
+        "strike_selection": {
+            "call_itm_pct": 0.02,
+            "call_otm_pct": 0.07,
+            "put_itm_pct": 0.02,
+            "put_otm_pct": 0.07
+        }
+    },
+    "signals": {
+        "trend_weight": 0.5,
+        "momentum_weight": 0.3,
+        "volatility_weight": 0.2,
+        "signal_threshold": 0.15,
+        "confirmation_required": true
+    },
+    "backtest": {
+        "initial_capital": 50000,
+        "commission_per_contract": 0.65,
+        "slippage_pct": 0.01
+    }
+}

@@ -1,0 +1,49 @@
+{
+    "version": "1.0.0",
+    "last_updated": "2025-06-21 06:00:00",
+    "options_strategies": {
+        "default_strategy": "auto",
+        "stop_loss_pct": 0.5,
+        "take_profit_pct": 1.0,
+        "max_days_to_hold": 14,
+        "strategy_selection": {
+            "bullish": {
+                "low_iv": "long_call",
+                "high_iv": "bull_put_spread",
+                "iv_threshold": 0.5
+            },
+            "bearish": {
+                "low_iv": "long_put",
+                "high_iv": "bear_call_spread",
+                "iv_threshold": 0.5
+            },
+            "neutral": {
+                "default": "iron_condor"
+            }
+        },
+        "expiration_selection": "nearest",
+        "strike_selection": {
+            "call_itm_pct": 0.03,
+            "call_otm_pct": 0.05,
+            "put_itm_pct": 0.03,
+            "put_otm_pct": 0.05
+        }
+    },
+    "technical_indicators": {
+        "use_sma": true,
+        "use_ema": true,
+        "use_macd": true,
+        "use_rsi": true,
+        "use_bollinger": true,
+        "sma_periods": [20, 50, 200],
+        "ema_periods": [12, 26],
+        "macd_params": {
+            "fast_period": 12,
+            "slow_period": 26,
+            "signal_period": 9
+        },
+        "rsi_period": 14,
+        "bollinger_period": 20,
+        "bollinger_std": 2.0
+    }
+}
