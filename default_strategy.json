@@ -45,5 +45,16 @@
         "rsi_period": 14,
         "bollinger_period": 20,
         "bollinger_std": 2.0
+    },
+    "use_greek_optimization": true,
+    "volatility_bias": "neutral",
+    "greek_optimization": {
+        "delta_threshold": 0.5,
+        "gamma_threshold": 0.1,
+        "theta_threshold": -0.1,
+        "vega_threshold": 0.2,
+        "min_open_interest": 50,
+        "min_volume": 5,
+        "max_bid_ask_spread": 0.1
     }
 }

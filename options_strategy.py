@@ -10,6 +10,7 @@ import numpy as np
 import logging
 from datetime import datetime, timedelta
 from strategy_config import load_strategy_config
+from greek_optimizer import GreekOptimizer
 
 logger = logging.getLogger('trading_bot.options_strategy')
 
@@ -23,6 +24,7 @@ class OptionsStrategy:
         """
         self.signals = {}
         self.config = load_strategy_config(config_path)
+        self.greek_optimizer = GreekOptimizer(self.config.get('greek_optimization', {}))
         logger.info("Options strategy initialized with configuration")
     
     def generate_signals(self, data_dict, options_data):
@@ -172,6 +174,161 @@ class OptionsStrategy:
         if default_strategy != 'auto':
             signal = default_strategy
         
+        # Check if Greek optimization is enabled
+        use_greeks = self.config.get('use_greek_optimization', True)
+        
+        # Estimate risk capital (simplified)
+        risk_capital = 10000  # Default value
+        if 'backtest' in self.config:
+            initial_capital = self.config['backtest'].get('initial_capital', 100000)
+            risk_per_trade = self.config.get('general', {}).get('risk_per_trade', 0.02)
+            risk_capital = initial_capital * risk_per_trade
+        
+        # Use Greek optimization if enabled and Greeks are available
+        if use_greeks and 'calls' in options_data and 'puts' in options_data:
+            # Check if Greeks are available in the data
+            calls = options_data.get('calls', pd.DataFrame())
+            puts = options_data.get('puts', pd.DataFrame())
+            
+            has_greeks = False
+            if not calls.empty and 'delta' in calls.columns:
+                has_greeks = True
+            
+            if has_greeks:
+                logger.info(f"Using Greek optimization for {symbol}")
+                
+                if signal == 'bullish':
+                    # Optimize a bullish directional trade
+                    optimized_trade = self.greek_optimizer.optimize_directional_trade(
+                        options_data, 'bullish', risk_capital
+                    )
+                    
+                    if optimized_trade:
+                        # Convert to our standard signal format
+                        return {
+                            'signal': 'BULLISH',
+                            'strategy': optimized_trade['strategy'].upper(),
+                            'option': {
+                                'strike': optimized_trade['strike'],
+                                'lastPrice': optimized_trade['price'],
+                                'delta': optimized_trade['delta'],
+                                'gamma': optimized_trade['gamma'],
+                                'theta': optimized_trade['theta'],
+                                'vega': optimized_trade['vega']
+                            },
+                            'expiry': expiry,
+                            'current_price': current_price,
+                            'contracts': optimized_trade['contracts'],
+                            'greek_optimized': True
+                        }
+                
+                elif signal == 'bearish':
+                    # Optimize a bearish directional trade
+                    optimized_trade = self.greek_optimizer.optimize_directional_trade(
+                        options_data, 'bearish', risk_capital
+                    )
+                    
+                    if optimized_trade:
+                        # Convert to our standard signal format
+                        return {
+                            'signal': 'BEARISH',
+                            'strategy': optimized_trade['strategy'].upper(),
+                            'option': {
+                                'strike': optimized_trade['strike'],
+                                'lastPrice': optimized_trade['price'],
+                                'delta': optimized_trade['delta'],
+                                'gamma': optimized_trade['gamma'],
+                                'theta': optimized_trade['theta'],
+                                'vega': optimized_trade['vega']
+                            },
+                            'expiry': expiry,
+                            'current_price': current_price,
+                            'contracts': optimized_trade['contracts'],
+                            'greek_optimized': True
+                        }
+                
+                else:  # neutral
+                    # For neutral outlook, optimize a volatility or theta trade
+                    # First check if we have a volatility bias
+                    volatility_bias = self.config.get('volatility_bias', 'neutral')
+                    
+                    if volatility_bias == 'increasing':
+                        # Optimize for increasing volatility
+                        optimized_trade = self.greek_optimizer.optimize_volatility_trade(
+                            options_data, 'increasing', risk_capital
+                        )
+                    elif volatility_bias == 'decreasing':
+                        # Optimize for decreasing volatility
+                        optimized_trade = self.greek_optimizer.optimize_volatility_trade(
+                            options_data, 'decreasing', risk_capital
+                        )
+                    else:
+                        # Default to theta decay trade
+                        optimized_trade = self.greek_optimizer.optimize_theta_decay_trade(
+                            options_data, risk_capital
+                        )
+                    
+                    if optimized_trade:
+                        # Convert to our standard signal format
+                        if optimized_trade['strategy'] == 'iron_condor':
+                            return {
+                                'signal': 'NEUTRAL',
+                                'strategy': 'IRON_CONDOR',
+                                'sell_call': {
+                                    'strike': optimized_trade['short_call_strike'],
+                                    'delta': optimized_trade.get('short_call_delta')
+                                },
+                                'buy_call': {
+                                    'strike': optimized_trade['long_call_strike']
+                                },
+                                'sell_put': {
+                                    'strike': optimized_trade['short_put_strike'],
+                                    'delta': optimized_trade.get('short_put_delta')
+                                },
+                                'buy_put': {
+                                    'strike': optimized_trade['long_put_strike']
+                                },
+                                'expiry': expiry,
+                                'current_price': current_price,
+                                'contracts': optimized_trade['contracts'],
+                                'net_credit': optimized_trade['net_credit'],
+                                'max_risk': optimized_trade['max_risk'],
+                                'total_vega': optimized_trade.get('total_vega'),
+                                'greek_optimized': True
+                            }
+                        elif optimized_trade['strategy'] == 'long_straddle':
+                            return {
+                                'signal': 'NEUTRAL',
+                                'strategy': 'LONG_STRADDLE',
+                                'call_strike': optimized_trade['call_strike'],
+                                'put_strike': optimized_trade['put_strike'],
+                                'expiry': expiry,
+                                'current_price': current_price,
+                                'contracts': optimized_trade['contracts'],
+                                'call_price': optimized_trade['call_price'],
+                                'put_price': optimized_trade['put_price'],
+                                'total_price': optimized_trade['total_price'],
+                                'total_vega': optimized_trade.get('total_vega'),
+                                'greek_optimized': True
+                            }
+                        elif optimized_trade['strategy'] in ['call_credit_spread', 'put_credit_spread']:
+                            return {
+                                'signal': 'NEUTRAL',
+                                'strategy': optimized_trade['strategy'].upper(),
+                                'short_strike': optimized_trade['short_strike'],
+                                'long_strike': optimized_trade['long_strike'],
+                                'expiry': expiry,
+                                'current_price': current_price,
+                                'contracts': optimized_trade['contracts'],
+                                'net_credit': optimized_trade['net_credit'],
+                                'max_risk': optimized_trade['max_risk'],
+                                'net_theta': optimized_trade.get('net_theta'),
+                                'greek_optimized': True
+                            }
+        
+        # Fall back to traditional strategy selection if Greek optimization is disabled or failed
+        logger.info(f"Using traditional strategy selection for {symbol}")
+        
         # Find ATM options
         calls = options_data.get('calls', pd.DataFrame())
         puts = options_data.get('puts', pd.DataFrame())
@@ -221,7 +378,8 @@ class OptionsStrategy:
                         'buy_option': otm_put,
                         'expiry': expiry,
                         'current_price': current_price,
-                        'iv': iv
+                        'iv': iv,
+                        'greek_optimized': False
                     }
             else:  # Low IV environment
                 strategy_name = bullish_config.get('low_iv', 'long_call')
@@ -232,7 +390,8 @@ class OptionsStrategy:
                         'option': atm_call,
                         'expiry': expiry,
                         'current_price': current_price,
-                        'iv': iv
+                        'iv': iv,
+                        'greek_optimized': False
                     }
                 
         elif signal == 'bearish':
@@ -250,7 +409,8 @@ class OptionsStrategy:
                         'buy_option': otm_call,
                         'expiry': expiry,
                         'current_price': current_price,
-                        'iv': iv
+                        'iv': iv,
+                        'greek_optimized': False
                     }
             else:  # Low IV environment
                 strategy_name = bearish_config.get('low_iv', 'long_put')
@@ -261,7 +421,8 @@ class OptionsStrategy:
                         'option': atm_put,
                         'expiry': expiry,
                         'current_price': current_price,
-                        'iv': iv
+                        'iv': iv,
+                        'greek_optimized': False
                     }
                 
         else:  # Neutral
@@ -279,7 +440,8 @@ class OptionsStrategy:
                     'buy_put': puts.loc[puts['strike'] < otm_put['strike']].iloc[0] if not puts[puts['strike'] < otm_put['strike']].empty else None,
                     'expiry': expiry,
                     'current_price': current_price,
-                    'iv': iv
+                    'iv': iv,
+                    'greek_optimized': False
                 }
         
         # If we get here, use a default strategy
@@ -291,7 +453,8 @@ class OptionsStrategy:
             'put': atm_put,
             'expiry': expiry,
             'current_price': current_price,
-            'iv': iv
+            'iv': iv,
+            'greek_optimized': False
         }
     
     def calculate_expected_profit(self, option_signal):
